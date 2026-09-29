@@ -140,12 +140,13 @@ let painted = false;    // האם התשריט כבר נבדק
 let stage = 'paint';    // paint | files | done
 let fileIdx = 0;
 let fileAns = [];
-let perms = [];         // סדר האפשרויות בכל תיק, מעורבב פעם אחת ונשמר
+let perms = [];
+let hist = [];          // מחסנית הצביעה, לביטול פעולה אחרונה         // סדר האפשרויות בכל תיק, מעורבב פעם אחת ונשמר
 
 /* ---------- שמירת התקדמות ---------- */
 function save() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ colors, painted, stage, fileIdx, fileAns, perms }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ colors, painted, stage, fileIdx, fileAns, perms, hist }));
   } catch (e) { /* גלישה פרטית */ }
 }
 function load() {
@@ -157,6 +158,7 @@ function load() {
     if (typeof s.fileIdx === 'number') fileIdx = s.fileIdx;
     if (Array.isArray(s.fileAns)) fileAns = s.fileAns;
     if (Array.isArray(s.perms)) perms = s.perms;
+    if (Array.isArray(s.hist)) hist = s.hist;
   } catch (e) { /* נתונים פגומים */ }
 }
 
@@ -220,8 +222,12 @@ function paintHtml() {
         '<div class="actions"><button class="action" id="tofiles">לבקרת הסף</button>' +
         '<button class="ghost" id="repaint">לצבוע מחדש</button></div>' +
       '</div>'
-    : '<div class="actions"><button class="action" id="check" ' +
-        (Object.keys(colors).length === plan.PARTS.length ? '' : 'disabled') + '>בדקו את התשריט</button></div>';
+    : '<div class="actions">' +
+        '<button class="action" id="check" ' +
+          (Object.keys(colors).length === plan.PARTS.length ? '' : 'disabled') + '>בדקו את התשריט</button>' +
+        '<button class="ghost" id="undo" ' + (hist.length ? '' : 'disabled') + '>ביטול הפעולה האחרונה</button>' +
+        '<button class="ghost" id="reset" ' + (Object.keys(colors).length ? '' : 'disabled') + '>איפוס הצביעה</button>' +
+      '</div>';
 
   return '<div class="card">' +
       '<p class="panel-title">התשריט</p>' +
@@ -272,9 +278,10 @@ function filesHtml() {
           (ans.correct ? '✔ נכון.' : '✘ לא. הפגם הוא: ' + esc(f.options[f.correct])) + '</div>' +
         '<div class="why-box">' + md(f.why) + '</div>' +
         '<div class="actions"><button class="action" id="nextfile">' +
-          (fileIdx === gd.FILES.length - 1 ? 'לסיכום' : 'לתיק הבא') + '</button></div>' +
+          (fileIdx === gd.FILES.length - 1 ? 'לסיכום' : 'לתיק הבא') + '</button>' +
+          backBtn() + '</div>' +
       '</div>'
-    : '';
+    : '<div class="actions">' + backBtn() + '</div>';
 
   return '<div class="card">' +
       '<p class="panel-title">תיק ' + (fileIdx + 1) + ' מתוך ' + gd.FILES.length + ': ' + esc(f.title) + '</p>' +
@@ -282,6 +289,11 @@ function filesHtml() {
       '<p style="font-weight:700;margin:0 0 10px">' + esc(f.question) + '</p>' +
       '<div class="options">' + opts + '</div>' + fb +
     '</div>';
+}
+
+/** חזרה אחורה: לתיק הקודם, ומהתיק הראשון בחזרה לתשריט. */
+function backBtn() {
+  return '<button class="ghost" id="back">' + (fileIdx === 0 ? 'חזרה לתשריט' : 'לתיק הקודם') + '</button>';
 }
 
 /* ---------- סיכום ---------- */
@@ -300,7 +312,8 @@ function doneHtml() {
       '<div class="why-box" style="margin-top:14px">שלוש טענות שרווחות בשטח ואינן נכונות, וכולן הופיעו כאן: ' +
         'נספח העמדה הוא <b>1:500</b> ולא 1:250, בקרת התכן היא <b>51 יום</b> ולא 30 מאז תיקון פברואר 2026, ' +
         'ולמצללה מותרים <b>50 מ"ר או רבע מהשטח, לפי הגדול</b>, כשהמרווחים לפחות 40%.</div>' +
-      '<div class="actions"><button class="action" id="again">מהתחלה</button></div>' +
+      '<div class="actions"><button class="action" id="again">מהתחלה</button>' +
+        '<button class="ghost" id="backsum">לתיק האחרון</button></div>' +
     '</div>';
 }
 
@@ -317,6 +330,7 @@ function render() {
   el.querySelectorAll('.shade:not(:disabled)').forEach((b) => {
     b.addEventListener('click', () => {
       if (!selected) return;
+      hist.push({ id: selected, prev: colors[selected] || null });
       colors[selected] = b.dataset.shade;
       selected = null;
       save(); render();
@@ -324,9 +338,32 @@ function render() {
   });
   const check = document.getElementById('check');
   if (check) check.addEventListener('click', () => { painted = true; selected = null; save(); render(); });
+  const undo = document.getElementById('undo');
+  if (undo) undo.addEventListener('click', () => {
+    const last = hist.pop();
+    if (!last) return;
+    if (last.prev) colors[last.id] = last.prev; else delete colors[last.id];
+    selected = last.id;
+    save(); render();
+  });
+  const reset = document.getElementById('reset');
+  if (reset) reset.addEventListener('click', () => {
+    colors = {}; hist = []; selected = null; save(); render();
+  });
+  const back = document.getElementById('back');
+  if (back) back.addEventListener('click', () => {
+    if (fileIdx === 0) { stage = 'paint'; painted = true; }
+    else fileIdx--;
+    save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  const backsum = document.getElementById('backsum');
+  if (backsum) backsum.addEventListener('click', () => {
+    stage = 'files'; fileIdx = gd.FILES.length - 1;
+    save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
   const repaint = document.getElementById('repaint');
   if (repaint) repaint.addEventListener('click', () => {
-    colors = {}; painted = false; selected = null; save(); render();
+    colors = {}; hist = []; painted = false; selected = null; save(); render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
   const tofiles = document.getElementById('tofiles');
@@ -347,7 +384,7 @@ function render() {
   });
   const again = document.getElementById('again');
   if (again) again.addEventListener('click', () => {
-    colors = {}; painted = false; selected = null; stage = 'paint'; fileIdx = 0; fileAns = []; perms = [];
+    colors = {}; hist = []; painted = false; selected = null; stage = 'paint'; fileIdx = 0; fileAns = []; perms = [];
     save(); render(); window.scrollTo({ top: 0 });
   });
 }
