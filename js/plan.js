@@ -28,50 +28,58 @@ window.planSvg = (function () {
     {
       id: "existing",
       label: "קירות הבית הקיים",
+      short: "קירות קיימים",
       shape: '<path d="M240 330 h420 v230 h-420 z M268 358 h364 v174 h-364 z" fill-rule="evenodd"/>',
       tag: [450, 300],
     },
     {
       id: "addition",
       label: "תוספת חדר מבוקשת",
+      short: "תוספת חדר",
       shape: '<rect x="660" y="384" width="148" height="132"/>',
-      tag: [734, 366],
+      tag: [800, 356],
     },
     {
       id: "demolish",
       label: "מחיצה פנימית שנהרסת",
+      short: "מחיצה להריסה",
       shape: '<rect x="424" y="358" width="16" height="174"/>',
       hit: '<rect x="404" y="358" width="56" height="174"/>',
-      tag: [432, 560],
+      tag: [560, 614],
     },
     {
       id: "asbestos",
       label: "גג האסבסט של המחסן, לפירוק",
+      short: "גג אסבסט",
       shape: '<rect x="120" y="120" width="130" height="112"/>',
-      tag: [185, 104],
+      tag: [190, 100],
     },
     {
       id: "pergola",
       label: "פרגולה מבוקשת בחצר",
+      short: "פרגולה",
       shape: '<path d="M330 150 h210 v112 h-210 z" /><path d="M330 178 h210 M330 206 h210 M330 234 h210 M372 150 v112 M414 150 v112 M456 150 v112 M498 150 v112" stroke-width="4"/>',
       tag: [435, 134],
     },
     {
       id: "window",
       label: "חלון חדש שנפתח בקיר קיים",
+      short: "חלון חדש",
       shape: '<rect x="330" y="532" width="92" height="28"/>',
       hit: '<rect x="322" y="520" width="108" height="52"/>',
-      tag: [376, 596],
+      tag: [250, 614],
     },
     {
       id: "stairs",
       label: "מדרגות חוץ קיימות שנשארות",
+      short: "מדרגות",
       shape: '<path d="M700 566 h90 v13 h-90 z M700 583 h90 v13 h-90 z M700 600 h90 v13 h-90 z"/>',
-      tag: [660, 596],
+      tag: [848, 543],
     },
     {
       id: "boundary",
       label: "גבול המגרש",
+      short: "גבול המגרש",
       shape: '<path d="M60 40 h880 v600 h-880 z M74 54 h852 v572 h-852 z" fill-rule="evenodd"/>',
       hit: '<path d="M46 26 h908 v628 h-908 z M88 68 h824 v544 h-824 z" fill-rule="evenodd"/>',
       tag: [500, 26],
@@ -90,9 +98,8 @@ window.planSvg = (function () {
       '<rect x="716" y="613" width="58" height="41" fill="#e6dfd0"/>' +
       '<circle cx="840" cy="180" r="26" fill="#c3cdb0"/>' +
       '<circle cx="880" cy="250" r="18" fill="#c3cdb0"/>' +
-      '<path d="M900 560 l30 0 0 -30" stroke="#8d8577" stroke-width="3" fill="none"/>' +
-      '<text x="915" y="548" fill="#8d8577" font-size="18" text-anchor="middle" ' +
-      'font-family="Heebo, Arial, sans-serif">N</text>'
+      '<text x="128" y="640" fill="#8d8577" font-size="22" text-anchor="start" ' +
+      'font-family="Heebo, Arial, sans-serif" direction="rtl">צפון למעלה</text>'
     );
   }
 
@@ -109,10 +116,12 @@ window.planSvg = (function () {
       if (p.hit) {
         out += '<g class="hit" data-part="' + p.id + '" fill="transparent" stroke="none">' + p.hit + '</g>';
       }
+      // הכיתוב על השרטוט: מספר ושם קצר. בלעדיו צריך לנוע הלוך ושוב בין
+      // הציור לרשימה כדי לדעת מה כל צורה.
       out += '<text class="ptag" data-part="' + p.id + '" x="' + p.tag[0] + '" y="' + p.tag[1] +
-        '" font-size="21" font-weight="700" text-anchor="middle" fill="' + INK + '" ' +
+        '" font-size="30" font-weight="700" text-anchor="middle" fill="' + INK + '" ' +
         'font-family="Heebo, Arial, sans-serif" direction="rtl" paint-order="stroke" ' +
-        'stroke="#f6f2e8" stroke-width="6">' + (PARTS.indexOf(p) + 1) + '</text>';
+        'stroke="#f6f2e8" stroke-width="8">' + (PARTS.indexOf(p) + 1) + '. ' + p.short + '</text>';
     }
     out += '</svg>';
     return out;
