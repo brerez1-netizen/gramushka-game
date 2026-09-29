@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>צובעים את הגרמושקה</title>
+<style>
+  :root {
+    --bg: #23201a; --panel: #312c23; --panel-2: #3c352a;
+    --ink: #f2ece0; --dim: #b9ad99; --line: #544a3a;
+    --accent: #d9a441;
+    --ok: #74bd7f; --ok-bg: #22331f;
+    --bad: #de8a80; --bad-bg: #3a2019;
+    --paper: #f6f2e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 "Segoe UI", system-ui, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 1.6rem; font-weight: 900; margin: 0 0 4px; }
+  .sub { color: var(--dim); font-size: .92rem; margin: 0 0 18px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px; margin-bottom: 14px;
+  }
+  .panel-title { font-weight: 900; margin: 0 0 10px; font-size: 1.05rem; color: var(--accent); }
+
+  .stages { display: flex; gap: 8px; margin-bottom: 16px; }
+  .stage-chip {
+    flex: 1; padding: 8px 10px; border-radius: 8px; text-align: center;
+    background: var(--panel-2); border: 1px solid var(--line);
+    font-size: .86rem; font-weight: 700; color: var(--dim);
+  }
+  .stage-chip.on { border-color: var(--accent); color: var(--accent); }
+  .stage-chip.done { border-color: var(--ok); color: var(--ok); }
+
+  .plan { display: block; width: 100%; height: auto; background: var(--paper); border-radius: 8px; }
+  .part, .hit { cursor: pointer; }
+  .part.sel { stroke: #d9a441; stroke-width: 7; }
+  .ptag { pointer-events: none; }
+
+  .shades { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+  .shade {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 8px; padding: 8px 12px; font: inherit; font-weight: 700;
+  }
+  .shade:disabled { opacity: .4; cursor: default; }
+  .shade .dot { width: 20px; height: 20px; border-radius: 4px; border: 1px solid #0006; flex: none; }
+  .shade small { font-weight: 400; color: var(--dim); font-size: .76rem; }
+  .shade:hover:not(:disabled), .shade:focus-visible { border-color: var(--accent); outline: none; }
+
+  .parts { list-style: none; margin: 0; padding: 0; }
+  .parts li {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: .93rem;
+  }
+  .parts li:last-child { border-bottom: none; }
+  .parts .num {
+    width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--ink);
+    font: inherit; font-weight: 900; font-size: .82rem; cursor: pointer; flex: none;
+  }
+  .parts li.sel .num { border-color: var(--accent); color: var(--accent); }
+  .parts .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid #0006; flex: none; }
+  .parts .mark { margin-inline-start: auto; font-weight: 900; font-size: .88rem; }
+  .parts .mark.ok { color: var(--ok); }
+  .parts .mark.bad { color: var(--bad); }
+  .parts .why { flex-basis: 100%; color: var(--dim); font-size: .88rem; padding-inline-start: 38px; }
+
+  .docs { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .docs li {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+    padding: 5px 12px; font-size: .86rem;
+  }
+  .options { display: grid; gap: 8px; }
+  .opt {
+    text-align: right; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+    font: inherit; cursor: pointer;
+  }
+  .opt:hover:not([disabled]), .opt:focus-visible { border-color: var(--accent); outline: none; }
+  .opt[disabled] { cursor: default; }
+  .opt.picked-ok, .opt.was-right { background: var(--ok-bg); border-color: var(--ok); }
+  .opt.picked-bad { background: var(--bad-bg); border-color: var(--bad); }
+
+  .feedback { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .verdict-line { font-weight: 900; margin-bottom: 8px; }
+  .verdict-line.ok { color: var(--ok); }
+  .verdict-line.bad { color: var(--bad); }
+  .why-box { color: var(--dim); font-size: .93rem; white-space: pre-line; }
+  .why-box b { color: var(--ink); }
+
+  .actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+  button.action {
+    background: var(--accent); color: #23201a; border: none; border-radius: 8px;
+    padding: 11px 20px; font: inherit; font-weight: 900; cursor: pointer;
+  }
+  button.action:disabled { opacity: .45; cursor: default; }
+  button.ghost {
+    background: transparent; color: var(--dim); border: 1px solid var(--line);
+    border-radius: 8px; padding: 11px 18px; font: inherit; cursor: pointer;
+  }
+  button.action:focus-visible, button.ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .notice { font-size: .88rem; color: var(--dim); margin-top: 10px; }
+  .score { font-size: 2.4rem; font-weight: 900; color: var(--accent); }
+  .sum-row {
+    display: flex; gap: 10px; align-items: baseline; padding: 8px 0;
+    border-bottom: 1px dashed var(--line); font-size: .92rem;
+  }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-row .mark { font-weight: 900; }
+  .sum-row .mark.ok { color: var(--ok); }
+  .sum-row .mark.bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>צובעים את הגרמושקה</h1>
+  <p class="sub">תיק בקשה להיתר משני צדי השולחן: קודם מסמנים את התשריט, ואחר כך יושבים בעמדת בקרת הסף.</p>
+
+  <div class="stages" id="stages"></div>
+  <div id="stage"></div>
+</div>
+
+<script src="js/plan.js"></script>
+<script src="js/gameData.js"></script>
+<script>
+const STORAGE_KEY = 'gramushka_v1';
+const gd = window.gameData;
+const plan = window.planSvg;
+
+let colors = {};        // מזהה רכיב -> מפתח גוון
+let selected = null;    // הרכיב המסומן כרגע
+let painted = false;    // האם התשריט כבר נבדק
+let stage = 'paint';    // paint | files | done
+let fileIdx = 0;
+let fileAns = [];
+let perms = [];         // סדר האפשרויות בכל תיק, מעורבב פעם אחת ונשמר
+
+/* ---------- שמירת התקדמות ---------- */
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ colors, painted, stage, fileIdx, fileAns, perms }));
+  } catch (e) { /* גלישה פרטית */ }
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (s.colors) colors = s.colors;
+    if (typeof s.painted === 'boolean') painted = s.painted;
+    if (s.stage) stage = s.stage;
+    if (typeof s.fileIdx === 'number') fileIdx = s.fileIdx;
+    if (Array.isArray(s.fileAns)) fileAns = s.fileAns;
+    if (Array.isArray(s.perms)) perms = s.perms;
+  } catch (e) { /* נתונים פגומים */ }
+}
+
+function paintScore() {
+  return plan.PARTS.filter((p) => colors[p.id] === gd.PAINT[p.id].shade).length;
+}
+function fileScore() {
+  return fileAns.filter((a) => a && a.correct).length;
+}
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+}
+function md(s) {
+  return esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+/* ---------- מד השלבים ---------- */
+function renderStages() {
+  const passed = (key) =>
+    (key === 'paint' && (stage === 'files' || stage === 'done')) ||
+    (key === 'files' && stage === 'done');
+  const chip = (key, label) =>
+    '<div class="stage-chip ' + (stage === key ? 'on' : (passed(key) ? 'done' : '')) + '">' + label + '</div>';
+  document.getElementById('stages').innerHTML =
+    chip('paint', '1. סימון התשריט') + chip('files', '2. בקרת סף') + chip('done', '3. סיכום');
+}
+
+/* ---------- חלק א: צביעת התשריט ---------- */
+function paintHtml() {
+  const shades = Object.values(plan.SHADES).map((s) =>
+    '<button class="shade" data-shade="' + s.key + '" ' + (selected && !painted ? '' : 'disabled') + '>' +
+      '<span class="dot" style="background:' + s.hex + '"></span>' +
+      '<span>' + s.label + '<br><small>' + s.note + '</small></span>' +
+    '</button>').join('');
+
+  const list = plan.PARTS.map((p, i) => {
+    const chosen = colors[p.id];
+    const truth = gd.PAINT[p.id];
+    const sw = chosen
+      ? '<span class="swatch" style="background:' + plan.SHADES[chosen].hex + '"></span>'
+      : '<span class="swatch" style="background:#efe9dc"></span>';
+    let mark = '', why = '';
+    if (painted) {
+      const good = chosen === truth.shade;
+      mark = '<span class="mark ' + (good ? 'ok' : 'bad') + '">' +
+        (good ? '✔ ' + plan.SHADES[truth.shade].label : '✘ צריך ' + plan.SHADES[truth.shade].label) + '</span>';
+      why = '<div class="why">' + md(truth.why) + '</div>';
+    }
+    return '<li class="' + (selected === p.id ? 'sel' : '') + '">' +
+      '<button class="num" data-part="' + p.id + '" ' + (painted ? 'disabled' : '') + '>' + (i + 1) + '</button>' +
+      sw + '<span>' + esc(p.label) + '</span>' + mark + why +
+    '</li>';
+  }).join('');
+
+  const tail = painted
+    ? '<div class="feedback">' +
+        '<div class="verdict-line ' + (paintScore() === 8 ? 'ok' : '') + '">סימנתם נכון ' + paintScore() + ' מתוך 8.</div>' +
+        '<div class="why-box">שלושה גוונים בלבד מעוגנים בתקנות רישוי בנייה: <b>כהה</b> לחלקים קיימים, ' +
+          '<b>צהוב</b> למבנים או חלקי מבנים להריסה, ו<b>כתום</b> לאסבסט לפירוק. אדום לחדש המבוקש וכחול ' +
+          'לגבול המגרש הם מוסכמה משרדית שהוועדות מצפות לה, והמשחק מקבל אותה, אבל כדאי לדעת מה מחייב ומה נהוג.</div>' +
+        '<div class="actions"><button class="action" id="tofiles">לבקרת הסף</button>' +
+        '<button class="ghost" id="repaint">לצבוע מחדש</button></div>' +
+      '</div>'
+    : '<div class="actions"><button class="action" id="check" ' +
+        (Object.keys(colors).length === plan.PARTS.length ? '' : 'disabled') + '>בדקו את התשריט</button></div>';
+
+  return '<div class="card">' +
+      '<p class="panel-title">התשריט</p>' +
+      '<div id="planbox">' + plan.render(colors, selected) + '</div>' +
+      '<div class="shades">' + shades + '</div>' +
+      '<p class="notice">' + (painted
+        ? 'לכל רכיב מופיע הגוון הנכון והנימוק שלו.'
+        : (selected ? 'עכשיו בחרו גוון.' : 'הקישו על רכיב בתשריט, או על המספר שלו ברשימה.')) + '</p>' +
+    '</div>' +
+    '<div class="card"><p class="panel-title">שמונת הרכיבים</p><ul class="parts">' + list + '</ul>' + tail + '</div>';
+}
+
+/* ---------- חלק ב: בקרת סף ----------
+   סדר האפשרויות מעורבב בזמן ריצה. בכתיבה רציפה התשובה הנכונה נוטה לשבת תמיד
+   ראשונה, ואז הסטודנט לומד את המיקום ולא את החומר. הערבוב נשמר, כדי שרענון
+   של הדף לא יזיז את האפשרויות מתחת ליד. */
+function permFor(i) {
+  if (!perms[i]) {
+    const n = gd.FILES[i].options.length;
+    const a = Array.from({ length: n }, (_, k) => k);
+    for (let k = n - 1; k > 0; k--) {
+      const j = Math.floor(Math.random() * (k + 1));
+      const t = a[k]; a[k] = a[j]; a[j] = t;
+    }
+    perms[i] = a;
+    save();
+  }
+  return perms[i];
+}
+
+function filesHtml() {
+  const f = gd.FILES[fileIdx];
+  const ans = fileAns[fileIdx];
+  const docs = f.docs.map((t) => '<li>' + esc(t) + '</li>').join('');
+  const opts = permFor(fileIdx).map((i) => {
+    const t = f.options[i];
+    let cls = 'opt';
+    if (ans) {
+      if (i === ans.picked) cls += ans.correct ? ' picked-ok' : ' picked-bad';
+      else if (i === f.correct) cls += ' was-right';
+    }
+    return '<button class="' + cls + '" ' + (ans ? 'disabled' : '') + ' data-opt="' + i + '">' + esc(t) + '</button>';
+  }).join('');
+
+  const fb = ans
+    ? '<div class="feedback">' +
+        '<div class="verdict-line ' + (ans.correct ? 'ok' : 'bad') + '">' +
+          (ans.correct ? '✔ נכון.' : '✘ לא. הפגם הוא: ' + esc(f.options[f.correct])) + '</div>' +
+        '<div class="why-box">' + md(f.why) + '</div>' +
+        '<div class="actions"><button class="action" id="nextfile">' +
+          (fileIdx === gd.FILES.length - 1 ? 'לסיכום' : 'לתיק הבא') + '</button></div>' +
+      '</div>'
+    : '';
+
+  return '<div class="card">' +
+      '<p class="panel-title">תיק ' + (fileIdx + 1) + ' מתוך ' + gd.FILES.length + ': ' + esc(f.title) + '</p>' +
+      '<ul class="docs">' + docs + '</ul>' +
+      '<p style="font-weight:700;margin:0 0 10px">' + esc(f.question) + '</p>' +
+      '<div class="options">' + opts + '</div>' + fb +
+    '</div>';
+}
+
+/* ---------- סיכום ---------- */
+function doneHtml() {
+  const rows = gd.FILES.map((f, i) => {
+    const a = fileAns[i];
+    return '<div class="sum-row"><span class="mark ' + (a && a.correct ? 'ok' : 'bad') + '">' +
+      (a && a.correct ? '✔' : '✘') + '</span><span>' + esc(f.title) + '</span></div>';
+  }).join('');
+  return '<div class="card">' +
+      '<p class="panel-title">סיכום</p>' +
+      '<p class="score">' + (paintScore() + fileScore()) + ' / ' + (plan.PARTS.length + gd.FILES.length) + '</p>' +
+      '<div class="sum-row"><span class="mark ' + (paintScore() === plan.PARTS.length ? 'ok' : 'bad') + '">' +
+        paintScore() + '/' + plan.PARTS.length + '</span><span>סימון התשריט</span></div>' +
+      rows +
+      '<div class="why-box" style="margin-top:14px">שלוש טענות שרווחות בשטח ואינן נכונות, וכולן הופיעו כאן: ' +
+        'נספח העמדה הוא <b>1:500</b> ולא 1:250, בקרת התכן היא <b>51 יום</b> ולא 30 מאז תיקון פברואר 2026, ' +
+        'ולמצללה מותרים <b>50 מ"ר או רבע מהשטח, לפי הגדול</b>, כשהמרווחים לפחות 40%.</div>' +
+      '<div class="actions"><button class="action" id="again">מהתחלה</button></div>' +
+    '</div>';
+}
+
+/* ---------- רינדור ומאזינים ---------- */
+function render() {
+  renderStages();
+  const el = document.getElementById('stage');
+  el.innerHTML = stage === 'paint' ? paintHtml() : (stage === 'files' ? filesHtml() : doneHtml());
+
+  el.querySelectorAll('[data-part]').forEach((n) => {
+    if (painted) return;
+    n.addEventListener('click', () => { selected = n.dataset.part; render(); });
+  });
+  el.querySelectorAll('.shade:not(:disabled)').forEach((b) => {
+    b.addEventListener('click', () => {
+      if (!selected) return;
+      colors[selected] = b.dataset.shade;
+      selected = null;
+      save(); render();
+    });
+  });
+  const check = document.getElementById('check');
+  if (check) check.addEventListener('click', () => { painted = true; selected = null; save(); render(); });
+  const repaint = document.getElementById('repaint');
+  if (repaint) repaint.addEventListener('click', () => {
+    colors = {}; painted = false; selected = null; save(); render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  const tofiles = document.getElementById('tofiles');
+  if (tofiles) tofiles.addEventListener('click', () => {
+    stage = 'files'; save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  el.querySelectorAll('.opt:not([disabled])').forEach((b) => {
+    b.addEventListener('click', () => {
+      const i = Number(b.dataset.opt);
+      fileAns[fileIdx] = { picked: i, correct: i === gd.FILES[fileIdx].correct };
+      save(); render();
+    });
+  });
+  const nf = document.getElementById('nextfile');
+  if (nf) nf.addEventListener('click', () => {
+    if (fileIdx === gd.FILES.length - 1) stage = 'done'; else fileIdx++;
+    save(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  const again = document.getElementById('again');
+  if (again) again.addEventListener('click', () => {
+    colors = {}; painted = false; selected = null; stage = 'paint'; fileIdx = 0; fileAns = []; perms = [];
+    save(); render(); window.scrollTo({ top: 0 });
+  });
+}
+
+load();
+render();
+</script>
+</body>
+</html>
